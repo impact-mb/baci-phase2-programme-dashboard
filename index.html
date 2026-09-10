@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BACI Phase 2 Impact Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    .global-reporting-bar {
+      max-width: 1700px;
+      margin: 0 auto;
+      padding: 0 22px 18px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .global-reporting-bar label {
+      min-width: 180px;
+      text-align: left;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .global-reporting-bar select {
+      margin-top: 6px;
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 9px;
+      padding: 8px 10px;
+      background: #fff;
+      color: #172230;
+      font-size: 14px;
+    }
+
+    .child-section {
+      margin-top: 18px;
+    }
+
+    .child-controls {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+      margin-top: 14px;
+    }
+
+    .child-controls label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #374151;
+    }
+
+    .child-controls input,
+    .child-controls select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid #dfe5ea;
+      border-radius: 9px;
+      padding: 9px 11px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .section-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th.sortable:hover {
+      background: #dfeaf0;
+    }
+
+    .sort-indicator {
+      margin-left: 6px;
+      font-size: 10px;
+      opacity: .65;
+    }
+
+    .month-note {
+      margin-top: 10px;
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .global-reporting-bar {
+        padding: 0 12px 14px;
+      }
+
+      .global-reporting-bar label {
+        min-width: 100%;
+      }
+
+      .child-controls {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <p class="eyebrow">BACI • PHASE 2</p>
+      <h1>Impact Dashboard</h1>
+      <p class="subtitle">
+        Programme-level session tracking and district-wise outreach summary
+      </p>
+    </div>
+
+    <div class="global-reporting-bar">
+      <label>
+        Financial Year
+        <select id="fyFilter">
+          <option value="2026-27" selected>FY 2026–27</option>
+        </select>
+      </label>
+
+      <label>
+        Reporting Month
+        <select id="monthFilter">
+          <option value="">All Months</option>
+          <option value="04">April 2026</option>
+          <option value="05">May 2026</option>
+          <option value="06">June 2026</option>
+          <option value="07">July 2026</option>
+          <option value="08">August 2026</option>
+          <option value="09">September 2026</option>
+          <option value="10">October 2026</option>
+          <option value="11">November 2026</option>
+          <option value="12">December 2026</option>
+          <option value="01">January 2027</option>
+          <option value="02">February 2027</option>
+          <option value="03">March 2027</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <!-- PROGRAMME SUMMARY -->
+    <section class="card filter-card">
+      <div class="filter-header">
+        <div>
+          <h2>Programme Summary</h2>
+          <p>
+            Data source:
+            <strong>01_Programme_Summary.csv</strong>
+          </p>
+          <div class="month-note">
+            Programme summary is cumulative. Month filtering is applied to the Child Session Matrix using SessionHeldOn dates.
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="downloadAll" class="primary-btn" type="button">
+            Download All Data
+          </button>
+
+          <button id="downloadFiltered" class="primary-btn" type="button">
+            Download Filtered Data
+          </button>
+
+          <button id="resetFilters" class="secondary-btn" type="button">
+            Reset Filters
+          </button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <label>
+          <span>Region</span>
+          <select id="regionFilter">
+            <option value="">All Regions</option>
+          </select>
+        </label>
+
+        <label>
+          <span>State</span>
+          <select id="stateFilter">
+            <option value="">All States</option>
+          </select>
+        </label>
+
+        <label>
+          <span>District</span>
+          <select id="districtFilter">
+            <option value="">All Districts</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Program SubType</span>
+          <select id="programSubtypeFilter">
+            <option value="">All Programme Types</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="table-toolbar">
+        <div>
+          <h2>Programme-level Attendance</h2>
+          <p id="tableStatus">Loading data...</p>
+        </div>
+
+        <div class="section-actions">
+          <button id="exportProgrammeTable" class="primary-btn" type="button">
+            Export Table CSV
+          </button>
+
+          <div class="table-hint">
+            Click a column heading to sort • Scroll horizontally for sessions
+          </div>
+        </div>
+      </div>
+
+      <div id="messageBox" class="message-box hidden"></div>
+
+      <div class="table-wrapper">
+        <table id="programmeTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CHILD MATRIX -->
+    <section class="card filter-card child-section">
+      <div class="filter-header">
+        <div>
+          <h2>Child Session Matrix</h2>
+          <p>
+            District-wise ChildID × CLS session-date matrix
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <button id="downloadChildMatrix" class="primary-btn" type="button">
+            Download This Table CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="child-controls">
+        <label>
+          <span>District</span>
+          <select id="childDistrictFilter">
+            <option value="">Select District</option>
+            <option value="AHMADABAD">AHMADABAD</option>
+            <option value="CHENNAI">CHENNAI</option>
+            <option value="GREATER HYDERABAD">GREATER HYDERABAD</option>
+            <option value="MUMBAI">MUMBAI</option>
+            <option value="NORTH WEST DELHI">NORTH WEST DELHI</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Search ChildID</span>
+          <input
+            id="childIdSearch"
+            type="search"
+            placeholder="Enter ChildID..."
+            disabled
+          />
+        </label>
+
+        <button id="clearChildSearch" class="secondary-btn" type="button">
+          Clear
+        </button>
+      </div>
+
+      <div class="table-toolbar">
+        <div>
+          <h2 id="childTableTitle">District Child Session Data</h2>
+          <p id="childTableStatus">Select a district to load data</p>
+        </div>
+
+        <div class="table-hint">
+          Click a column heading to sort • Month filter uses SessionHeldOn
+        </div>
+      </div>
+
+      <div id="childMessageBox" class="message-box hidden"></div>
+
+      <div class="table-wrapper">
+        <table id="childMatrixTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    BACI Phase 2 Impact Dashboard
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
