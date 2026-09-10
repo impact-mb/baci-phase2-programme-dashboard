@@ -7,36 +7,6 @@
   <link rel="stylesheet" href="style.css" />
 
   <style>
-    .global-reporting-bar {
-      max-width: 1700px;
-      margin: 0 auto;
-      padding: 0 22px 18px;
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .global-reporting-bar label {
-      min-width: 180px;
-      text-align: left;
-      color: #fff;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .global-reporting-bar select {
-      margin-top: 6px;
-      width: 100%;
-      min-height: 40px;
-      border: 1px solid rgba(255,255,255,.35);
-      border-radius: 9px;
-      padding: 8px 10px;
-      background: #fff;
-      color: #172230;
-      font-size: 14px;
-    }
-
     .child-section {
       margin-top: 18px;
     }
@@ -91,25 +61,37 @@
       opacity: .65;
     }
 
-    .month-note {
-      margin-top: 10px;
-      color: #6b7280;
-      font-size: 12px;
-    }
-
     @media (max-width: 760px) {
-      .global-reporting-bar {
-        padding: 0 12px 14px;
-      }
-
-      .global-reporting-bar label {
-        min-width: 100%;
-      }
-
       .child-controls {
         grid-template-columns: 1fr;
       }
     }
+  
+    .page-nav {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 18px 0 20px;
+    }
+
+    .page-nav a {
+      display: inline-block;
+      padding: 10px 16px;
+      border: 1px solid #176b5b;
+      border-radius: 9px;
+      color: #176b5b;
+      background: #fff;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    .page-nav a.active,
+    .page-nav a:hover {
+      background: #176b5b;
+      color: #fff;
+    }
+
   </style>
 </head>
 
@@ -122,37 +104,15 @@
         Programme-level session tracking and district-wise outreach summary
       </p>
     </div>
-
-    <div class="global-reporting-bar">
-      <label>
-        Financial Year
-        <select id="fyFilter">
-          <option value="2026-27" selected>FY 2026–27</option>
-        </select>
-      </label>
-
-      <label>
-        Reporting Month
-        <select id="monthFilter">
-          <option value="">All Months</option>
-          <option value="04">April 2026</option>
-          <option value="05">May 2026</option>
-          <option value="06">June 2026</option>
-          <option value="07">July 2026</option>
-          <option value="08">August 2026</option>
-          <option value="09">September 2026</option>
-          <option value="10">October 2026</option>
-          <option value="11">November 2026</option>
-          <option value="12">December 2026</option>
-          <option value="01">January 2027</option>
-          <option value="02">February 2027</option>
-          <option value="03">March 2027</option>
-        </select>
-      </label>
-    </div>
   </header>
 
   <main class="page">
+
+    <nav class="page-nav" aria-label="Dashboard pages">
+      <a href="index.html" class="active">Page 1 · Impact Dashboard</a>
+      <a href="page2.html">Page 2 · Session Quality Analysis</a>
+    </nav>
+
 
     <!-- PROGRAMME SUMMARY -->
     <section class="card filter-card">
@@ -163,9 +123,6 @@
             Data source:
             <strong>01_Programme_Summary.csv</strong>
           </p>
-          <div class="month-note">
-            Programme summary is cumulative. Month filtering is applied to the Child Session Matrix using SessionHeldOn dates.
-          </div>
         </div>
 
         <div class="header-actions">
@@ -184,6 +141,21 @@
       </div>
 
       <div class="filters">
+
+        <label>
+          <span>Financial Year</span>
+          <select id="fyFilter">
+            <option value="">All Financial Years</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Reporting Month</span>
+          <select id="monthFilter">
+            <option value="">All Reporting Months</option>
+          </select>
+        </label>
+
         <label>
           <span>Region</span>
           <select id="regionFilter">
@@ -227,7 +199,7 @@
           </button>
 
           <div class="table-hint">
-            Click a column heading to sort • Scroll horizontally for sessions
+            Click column headings to sort
           </div>
         </div>
       </div>
@@ -294,7 +266,7 @@
         </div>
 
         <div class="table-hint">
-          Click a column heading to sort • Month filter uses SessionHeldOn
+          Reporting Month filter above also applies to session dates here
         </div>
       </div>
 

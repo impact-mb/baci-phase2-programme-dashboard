@@ -30,7 +30,11 @@ const CHILD_VISIBLE_HEADERS = [
   ...CHILD_SESSION_COLUMNS
 ];
 
+// Hide reporting dimensions from the actual displayed table.
+// They remain available for filtering/export logic.
 const HIDDEN_COLUMNS = new Set([
+  "Financial_Year",
+  "Reporting_Month",
   "Unique_Children_Atleast_1_Session",
   "Region",
   "Target_Outreach",
@@ -38,6 +42,17 @@ const HIDDEN_COLUMNS = new Set([
   "Sessions_Conducted",
   "Average_Sessions_Per_Child"
 ]);
+
+const MONTH_ORDER = [
+  "August2026",
+  "September2026",
+  "October2026",
+  "November2026",
+  "December2026",
+  "January2027",
+  "February2027",
+  "March2027"
+];
 
 let allRows = [];
 let filteredRows = [];
@@ -48,7 +63,6 @@ let currentChildRows = [];
 let filteredChildRows = [];
 let selectedChildDistrict = "";
 
-// Sorting state
 let programmeSort = {
   column: null,
   direction: "asc"
@@ -59,10 +73,8 @@ let childSort = {
   direction: "asc"
 };
 
-// Global FY / Month
 const fyFilter = document.getElementById("fyFilter");
 const monthFilter = document.getElementById("monthFilter");
-
 const regionFilter = document.getElementById("regionFilter");
 const stateFilter = document.getElementById("stateFilter");
 const districtFilter = document.getElementById("districtFilter");
@@ -93,9 +105,7 @@ const childTableTitle = document.getElementById("childTableTitle");
 const childTableStatus = document.getElementById("childTableStatus");
 const childMessageBox = document.getElementById("childMessageBox");
 
-document.addEventListener("DOMContentLoaded", () => {
-  loadProgrammeData();
-});
+document.addEventListener("DOMContentLoaded", loadProgrammeData);
 
 async function loadProgrammeData() {
   try {
@@ -115,11 +125,11 @@ async function loadProgrammeData() {
     filteredRows = [...allRows];
 
     populateProgrammeFilters();
-    applyProgrammeSort();
-    renderProgrammeTable();
 
-    tableStatus.textContent =
-      `${filteredRows.length.toLocaleString("en-IN")} record(s) shown`;
+    // Default to latest available FY and month.
+    setDefaultFYAndMonth();
+
+    applyProgrammeFilters();
 
     hideMessage(messageBox);
 
@@ -234,14 +244,81 @@ function normalizeChildID(value) {
 }
 
 function populateProgrammeFilters() {
-  setFilterOptions(regionFilter, getUniqueValues(allRows, "Region"), "All Regions");
-  setFilterOptions(stateFilter, getUniqueValues(allRows, "STATENAME"), "All States");
-  setFilterOptions(districtFilter, getUniqueValues(allRows, "DISTRICTNAME"), "All Districts");
+  setFilterOptions(
+    fyFilter,
+    getUniqueValues(allRows, "Financial_Year"),
+    "All Financial Years"
+  );
+
+  const availableMonths = getUniqueValues(allRows, "Reporting_Month")
+    .sort((a, b) => {
+      const ia = MONTH_ORDER.indexOf(a);
+      const ib = MONTH_ORDER.indexOf(b);
+
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+
+      return ia - ib;
+    });
+
+  setFilterOptions(
+    monthFilter,
+    availableMonths,
+    "All Reporting Months"
+  );
+
+  setFilterOptions(
+    regionFilter,
+    getUniqueValues(allRows, "Region"),
+    "All Regions"
+  );
+
+  setFilterOptions(
+    stateFilter,
+    getUniqueValues(allRows, "STATENAME"),
+    "All States"
+  );
+
+  setFilterOptions(
+    districtFilter,
+    getUniqueValues(allRows, "DISTRICTNAME"),
+    "All Districts"
+  );
+
   setFilterOptions(
     programSubtypeFilter,
     getUniqueValues(allRows, "ProgramSubType"),
     "All Programme Types"
   );
+}
+
+function setDefaultFYAndMonth() {
+  const fyValues = Array.from(fyFilter.options)
+    .map(opt => opt.value)
+    .filter(Boolean);
+
+  if (fyValues.includes("FY2026-27")) {
+    fyFilter.value = "FY2026-27";
+  } else if (fyValues.includes("2026-27")) {
+    fyFilter.value = "2026-27";
+  } else if (fyValues.length) {
+    fyFilter.value = fyValues[fyValues.length - 1];
+  }
+
+  const monthValues = Array.from(monthFilter.options)
+    .map(opt => opt.value)
+    .filter(Boolean);
+
+  const orderedAvailable = MONTH_ORDER.filter(month =>
+    monthValues.includes(month)
+  );
+
+  if (orderedAvailable.length) {
+    monthFilter.value = orderedAvailable[orderedAvailable.length - 1];
+  } else if (monthValues.length) {
+    monthFilter.value = monthValues[monthValues.length - 1];
+  }
 }
 
 function getUniqueValues(rows, columnName) {
@@ -277,18 +354,24 @@ function setFilterOptions(selectElement, values, defaultLabel) {
 }
 
 function applyProgrammeFilters() {
+  const fy = fyFilter.value;
+  const month = monthFilter.value;
   const region = regionFilter.value;
   const state = stateFilter.value;
   const district = districtFilter.value;
   const subtype = programSubtypeFilter.value;
 
   filteredRows = allRows.filter(row => {
+    const matchesFY = !fy || row["Financial_Year"] === fy;
+    const matchesMonth = !month || row["Reporting_Month"] === month;
     const matchesRegion = !region || row["Region"] === region;
     const matchesState = !state || row["STATENAME"] === state;
     const matchesDistrict = !district || row["DISTRICTNAME"] === district;
     const matchesSubtype = !subtype || row["ProgramSubType"] === subtype;
 
     return (
+      matchesFY &&
+      matchesMonth &&
       matchesRegion &&
       matchesState &&
       matchesDistrict &&
@@ -301,11 +384,11 @@ function applyProgrammeFilters() {
 
   tableStatus.textContent =
     `${filteredRows.length.toLocaleString("en-IN")} record(s) shown`;
-}
 
-// ============================================================
-// SORT HELPERS
-// ============================================================
+  if (selectedChildDistrict && currentChildRows.length) {
+    applyChildFilters();
+  }
+}
 
 function smartCompare(a, b, column, direction) {
   const dir = direction === "asc" ? 1 : -1;
@@ -313,17 +396,14 @@ function smartCompare(a, b, column, direction) {
   const av = a[column] ?? "";
   const bv = b[column] ?? "";
 
-  // Numeric session columns
-  if (/\/SS\d+$/i.test(column)) {
+  if (/\/SS\d+$/i.test(column) && !CHILD_SESSION_COLUMNS.includes(column)) {
     return (toNumber(av) - toNumber(bv)) * dir;
   }
 
-  // ChildID numeric sorting
   if (column === "ChildID") {
     return (toNumber(av) - toNumber(bv)) * dir;
   }
 
-  // Session date columns in DD-MM-YYYY HH:MM format
   if (CHILD_SESSION_COLUMNS.includes(column)) {
     const ad = parseSessionDate(av);
     const bd = parseSessionDate(bv);
@@ -345,20 +425,15 @@ function smartCompare(a, b, column, direction) {
 function parseSessionDate(value) {
   const text = String(value ?? "").trim();
 
-  if (!text) {
-    return null;
-  }
+  if (!text) return null;
 
-  // If multiple dates are present, use the first date for sorting/filtering
   const firstDate = text.split("|")[0].trim();
 
   const match = firstDate.match(
     /^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/
   );
 
-  if (!match) {
-    return null;
-  }
+  if (!match) return null;
 
   const [, dd, mm, yyyy, hh, min, ss = "00"] = match;
 
@@ -373,9 +448,7 @@ function parseSessionDate(value) {
 }
 
 function applyProgrammeSort() {
-  if (!programmeSort.column) {
-    return;
-  }
+  if (!programmeSort.column) return;
 
   filteredRows.sort((a, b) =>
     smartCompare(
@@ -388,9 +461,7 @@ function applyProgrammeSort() {
 }
 
 function applyChildSort() {
-  if (!childSort.column) {
-    return;
-  }
+  if (!childSort.column) return;
 
   filteredChildRows.sort((a, b) =>
     smartCompare(
@@ -450,17 +521,11 @@ function addSortableHeader(th, column, sortState, clickHandler) {
   th.addEventListener("click", () => clickHandler(column));
 }
 
-// ============================================================
-// PROGRAMME TABLE
-// ============================================================
-
 function renderProgrammeTable() {
   programmeThead.innerHTML = "";
   programmeTbody.innerHTML = "";
 
-  if (!visibleHeaders.length) {
-    return;
-  }
+  if (!visibleHeaders.length) return;
 
   const headerRow = document.createElement("tr");
 
@@ -504,9 +569,7 @@ function renderProgrammeTable() {
 }
 
 function formatProgrammeCell(header, value) {
-  if (value === "") {
-    return "";
-  }
+  if (value === "") return "";
 
   if (isSessionNumericColumn(header)) {
     const number = toNumber(value);
@@ -538,10 +601,6 @@ function toNumber(value) {
 
   return Number.isFinite(parsed) ? parsed : 0;
 }
-
-// ============================================================
-// CHILD MATRIX LOAD / FILTER
-// ============================================================
 
 async function loadChildDistrictData(district) {
   selectedChildDistrict = district;
@@ -600,56 +659,46 @@ async function loadChildDistrictData(district) {
   }
 }
 
-function sessionValueMatchesMonth(value, monthCode) {
-  if (!monthCode) {
-    return true;
-  }
+function reportingMonthToMonthYear(reportingMonth) {
+  const map = {
+    "August2026": { month: "08", year: "2026" },
+    "September2026": { month: "09", year: "2026" },
+    "October2026": { month: "10", year: "2026" },
+    "November2026": { month: "11", year: "2026" },
+    "December2026": { month: "12", year: "2026" },
+    "January2027": { month: "01", year: "2027" },
+    "February2027": { month: "02", year: "2027" },
+    "March2027": { month: "03", year: "2027" }
+  };
 
-  const text = String(value ?? "").trim();
-
-  if (!text) {
-    return false;
-  }
-
-  // Support one or more session dates separated by |
-  const dates = text.split("|").map(x => x.trim()).filter(Boolean);
-
-  return dates.some(dateText => {
-    const match = dateText.match(/^(\d{2})-(\d{2})-(\d{4})/);
-
-    if (!match) {
-      return false;
-    }
-
-    const [, dd, mm, yyyy] = match;
-
-    // FY 2026-27:
-    // Apr-Dec => 2026
-    // Jan-Mar => 2027
-    const expectedYear =
-      ["01", "02", "03"].includes(monthCode)
-        ? "2027"
-        : "2026";
-
-    return mm === monthCode && yyyy === expectedYear;
-  });
+  return map[reportingMonth] || null;
 }
 
 function getMonthFilteredValue(value) {
-  const monthCode = monthFilter.value;
+  const selectedMonth = monthFilter.value;
 
-  if (!monthCode || !value) {
+  if (!selectedMonth || !value) {
     return value ?? "";
   }
+
+  const target = reportingMonthToMonthYear(selectedMonth);
+
+  if (!target) return value ?? "";
 
   const dates = String(value)
     .split("|")
     .map(x => x.trim())
     .filter(Boolean);
 
-  const matchingDates = dates.filter(dateText =>
-    sessionValueMatchesMonth(dateText, monthCode)
-  );
+  const matchingDates = dates.filter(dateText => {
+    const match = dateText.match(/^(\d{2})-(\d{2})-(\d{4})/);
+
+    if (!match) return false;
+
+    const [, dd, mm, yyyy] = match;
+
+    return mm === target.month && yyyy === target.year;
+  });
 
   return matchingDates.join(" | ");
 }
@@ -662,7 +711,6 @@ function applyChildFilters() {
     .map(row => {
       const copy = { ...row };
 
-      // When month is selected, blank session dates outside that month
       if (selectedMonth) {
         CHILD_SESSION_COLUMNS.forEach(col => {
           copy[col] = getMonthFilteredValue(row[col] ?? "");
@@ -678,11 +726,8 @@ function applyChildFilters() {
           .toLowerCase()
           .includes(query);
 
-      if (!matchesChild) {
-        return false;
-      }
+      if (!matchesChild) return false;
 
-      // If month selected, child must have at least one session in that month
       if (selectedMonth) {
         return CHILD_SESSION_COLUMNS.some(
           col => String(row[col] ?? "").trim() !== ""
@@ -695,11 +740,8 @@ function applyChildFilters() {
   applyChildSort();
   renderChildMatrix();
 
-  const monthLabel =
-    monthFilter.options[monthFilter.selectedIndex]?.text || "All Months";
-
   childTableStatus.textContent =
-    `${filteredChildRows.length.toLocaleString("en-IN")} child record(s) shown • ${monthLabel}`;
+    `${filteredChildRows.length.toLocaleString("en-IN")} child record(s) shown`;
 }
 
 function renderChildMatrix() {
@@ -745,10 +787,6 @@ function renderChildMatrix() {
   });
 }
 
-// ============================================================
-// CSV EXPORT
-// ============================================================
-
 function escapeCSV(value) {
   const text = String(value ?? "");
 
@@ -768,9 +806,7 @@ function buildCSV(rows, exportHeaders) {
   const lines = [];
 
   lines.push(
-    exportHeaders
-      .map(escapeCSV)
-      .join(",")
+    exportHeaders.map(escapeCSV).join(",")
   );
 
   rows.forEach(row => {
@@ -818,10 +854,6 @@ function downloadCSV(rows, exportHeaders, fileName) {
   URL.revokeObjectURL(url);
 }
 
-// ============================================================
-// MESSAGE HELPERS
-// ============================================================
-
 function showMessage(element, message, type = "info") {
   element.className = `message-box ${type}`;
   element.textContent = message;
@@ -832,39 +864,34 @@ function hideMessage(element) {
   element.textContent = "";
 }
 
-// ============================================================
-// EVENTS
-// ============================================================
-
+// FILTER EVENTS
+fyFilter.addEventListener("change", applyProgrammeFilters);
+monthFilter.addEventListener("change", applyProgrammeFilters);
 regionFilter.addEventListener("change", applyProgrammeFilters);
 stateFilter.addEventListener("change", applyProgrammeFilters);
 districtFilter.addEventListener("change", applyProgrammeFilters);
 programSubtypeFilter.addEventListener("change", applyProgrammeFilters);
 
 resetFilters.addEventListener("click", () => {
+  fyFilter.value = "";
+  monthFilter.value = "";
   regionFilter.value = "";
   stateFilter.value = "";
   districtFilter.value = "";
   programSubtypeFilter.value = "";
-
-  filteredRows = [...allRows];
 
   programmeSort = {
     column: null,
     direction: "asc"
   };
 
-  populateProgrammeFilters();
-  renderProgrammeTable();
-
-  tableStatus.textContent =
-    `${filteredRows.length.toLocaleString("en-IN")} record(s) shown`;
+  applyProgrammeFilters();
 });
 
 downloadAll.addEventListener("click", () => {
   downloadCSV(
     allRows,
-    visibleHeaders,
+    headers,
     "BACI_Phase2_Programme_Summary_All.csv"
   );
 });
@@ -872,7 +899,7 @@ downloadAll.addEventListener("click", () => {
 downloadFiltered.addEventListener("click", () => {
   downloadCSV(
     filteredRows,
-    visibleHeaders,
+    headers,
     "BACI_Phase2_Programme_Summary_Filtered.csv"
   );
 });
@@ -896,20 +923,6 @@ clearChildSearch.addEventListener("click", () => {
   applyChildFilters();
 });
 
-monthFilter.addEventListener("change", () => {
-  if (selectedChildDistrict && currentChildRows.length) {
-    applyChildFilters();
-  }
-});
-
-fyFilter.addEventListener("change", () => {
-  // Current dashboard is configured for FY 2026-27.
-  // Kept as a filter structure so additional FYs can be added later.
-  if (selectedChildDistrict && currentChildRows.length) {
-    applyChildFilters();
-  }
-});
-
 downloadChildMatrix.addEventListener("click", () => {
   if (!selectedChildDistrict || !filteredChildRows.length) {
     alert("Please select a district first.");
@@ -917,10 +930,7 @@ downloadChildMatrix.addEventListener("click", () => {
   }
 
   const safeDistrict = selectedChildDistrict.replace(/\s+/g, "_");
-  const monthText =
-    monthFilter.value
-      ? monthFilter.options[monthFilter.selectedIndex].text.replace(/\s+/g, "_")
-      : "All_Months";
+  const monthText = monthFilter.value || "AllMonths";
 
   downloadCSV(
     filteredChildRows,

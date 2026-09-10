@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BACI Phase 2 · Session Quality Analysis</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    .page-nav {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 18px 0 20px;
+    }
+
+    .page-nav a {
+      display: inline-block;
+      padding: 10px 16px;
+      border: 1px solid #176b5b;
+      border-radius: 9px;
+      color: #176b5b;
+      background: #fff;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    .page-nav a.active,
+    .page-nav a:hover {
+      background: #176b5b;
+      color: #fff;
+    }
+
+    .analysis-intro {
+      margin-bottom: 16px;
+    }
+
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .analysis-controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .analysis-controls label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #374151;
+    }
+
+    .analysis-controls select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid #dfe5ea;
+      border-radius: 9px;
+      padding: 9px 11px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .analysis-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .analysis-kpi {
+      border: 1px solid #e3e8ec;
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+
+    .analysis-kpi .label {
+      color: #6b7280;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .analysis-kpi .value {
+      font-size: 24px;
+      font-weight: 900;
+      color: #153c36;
+    }
+
+    .section-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .analysis-note {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .empty-cell {
+      text-align: center;
+      color: #6b7280;
+      padding: 24px !important;
+    }
+
+    @media (max-width: 900px) {
+      .analysis-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 650px) {
+      .analysis-controls,
+      .analysis-kpis {
+        grid-template-columns: 1fr;
+      }
+
+      .page-nav a {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <p class="eyebrow">BACI • PHASE 2</p>
+      <h1>Session Quality Analysis</h1>
+      <p class="subtitle">
+        Multiple sessions in a day and Sunday session delivery monitoring
+      </p>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <nav class="page-nav" aria-label="Dashboard pages">
+      <a href="index.html">Page 1 · Impact Dashboard</a>
+      <a href="page2.html" class="active">Page 2 · Session Quality Analysis</a>
+    </nav>
+
+    <section class="card filter-card analysis-intro">
+      <div class="filter-header">
+        <div>
+          <h2>Analysis Filters</h2>
+          <p>
+            Filter Sunday delivery by district and reporting month.
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <button id="resetAnalysisFilters" class="secondary-btn" type="button">
+            Reset Filters
+          </button>
+        </div>
+      </div>
+
+      <div class="analysis-controls">
+        <label>
+          <span>District</span>
+          <select id="analysisDistrictFilter">
+            <option value="">All Districts</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Reporting Month</span>
+          <select id="analysisMonthFilter">
+            <option value="">All Months</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <div class="analysis-kpis">
+      <div class="analysis-kpi">
+        <div class="label">Multiple Session Cases</div>
+        <div id="kpiMultipleCases" class="value">—</div>
+      </div>
+
+      <div class="analysis-kpi">
+        <div class="label">Children in Multiple Session Cases</div>
+        <div id="kpiMultipleChildren" class="value">—</div>
+      </div>
+
+      <div class="analysis-kpi">
+        <div class="label">Sunday Sessions Delivered</div>
+        <div id="kpiSundaySessions" class="value">—</div>
+      </div>
+
+      <div class="analysis-kpi">
+        <div class="label">Children Reached on Sunday</div>
+        <div id="kpiSundayChildren" class="value">—</div>
+      </div>
+    </div>
+
+    <div class="analysis-grid">
+
+      <section class="card table-card">
+        <div class="table-toolbar">
+          <div>
+            <h2>Multiple Sessions in a Day</h2>
+            <p class="analysis-note">
+              Occurrence buckets for ChildID-date cases with two or more sessions on the same date.
+            </p>
+          </div>
+
+          <div class="section-actions">
+            <button id="downloadMultipleSummary" class="primary-btn" type="button">
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div id="multipleMessage" class="message-box hidden"></div>
+
+        <div class="table-wrapper">
+          <table id="multipleSessionTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card table-card">
+        <div class="table-toolbar">
+          <div>
+            <h2>Sunday Session Delivery</h2>
+            <p id="sundayStatus" class="analysis-note">
+              Loading Sunday session summary...
+            </p>
+          </div>
+
+          <div class="section-actions">
+            <button id="downloadSundaySummary" class="primary-btn" type="button">
+              Export Filtered CSV
+            </button>
+          </div>
+        </div>
+
+        <div id="sundayMessage" class="message-box hidden"></div>
+
+        <div class="table-wrapper">
+          <table id="sundaySessionTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <p>BACI Phase 2 • Impact Dashboard</p>
+  </footer>
+
+  <script src="page2.js"></script>
+</body>
+</html>
